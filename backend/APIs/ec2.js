@@ -11,59 +11,30 @@ router.get('/', (req, res) => {
 var params = {};
 var ec2_client = new AWS.EC2();
 
-//function to get all EC2 instances with Info
-var ec2_description = function (callback) {
-    list_instances_not_in_list_amis = []
-    get_all_amis(function (list_amis) {
 
-        console.log(list_amis)
-        ec2_client.describeInstances(params, function (err, data) {
-            if (err) {
+//Please use this piece of code for getting ec2_info.The list has directly the info required for ec2 instances.
+list_ec2_description=[]
+var ec2_description=function(callback){
+    ec2_client.describeInstances(params, function (err, data) {
+        if (err) {
+            console.log(err, err.stack)
+            res.send("Error in Fetching response for EC2_description function")
+            return
+        }
+        reservations = data.Reservations
+        for (var i = 0; i< reservations.length; i++) {
+             instances=(reservations[i].Instances)
+        for(var j=0;j<instances.length;j++)
+        {
+            list_ec2_description.push(instances[j])
+        }
 
-
-                console.log(err, err.stack)
-                res.send("ERROR")
-                return
-            }
-
-
-            reservations = data.Reservations
-            //console.log(reservations);
-            for (var k = 0; k < reservations.length; k++) {
-                instances = reservations[k].Instances
-                for (var j = 0; j < instances.length; j++) {
-                    instance = instances[j]
-                    for (i = 0; i < list_amis.length; i++) {
-                        if (instance.ImageId != list_amis[i])
-                            list_instances_not_in_list_amis.push(instance.InstanceId)
-                    }
-
-                }
-
-            }
-            //callback has to be passed from here to ec2_secription in /unused_amis API call
-            console.log("########################")
-            console.log(list_instances_not_in_list_amis)
-
-            })
-
-            callback(list_instances_not_in_list_amis)
-
-
-
-        })
-    }
-
-
-
-router.get('/unused_amis', (req, res) => {
-    console.log("Calling unused amis")
-    ec2_description(function (list_instances_not_in_list_amis) {
-        res.send(list_instances_not_in_list_amis)
+}
+callback(list_ec2_description)
     })
+}
 
-
-})
+//This will get all the AMI info . Right now particularly I am getting IamgeId but will change if something more is required.
 list_amis = []
 var account_id = '207089718578'
 get_all_amis = function (callback) {
@@ -73,14 +44,6 @@ get_all_amis = function (callback) {
         else
             images = response.Images;
 
-        // for(var i=0;i<images.length;i++){
-
-        //         if(images[i].OwnerId=='207089718578')
-        //             console.log(images[i])
-        //             list_amis.push(images[i].ImageId)
-
-
-        // }
         images.forEach(function (image_id) {
             if (image_id.OwnerId == '207089718578')
                 //console.log(image_id.ImageId)
@@ -92,8 +55,70 @@ get_all_amis = function (callback) {
     })
 
 }
+//Testing Function for callbacks.
+function temp(){
+    console.log("Calling unused amis")
+    list_amis_used_in_ec2_instances=[]
+    ec2_description(function (list_ec2_description) {
+        for(var i=0;i<list_ec2_description.length;i++)
+        {
+            list_amis_used_in_ec2_instances.push(list_ec2_description.ImageId)
+        }
+    })
+    get_all_amis(function(list_amis){
+        output=[]
+       for(var i=0;i<list_amis_used_in_ec2_instances.length;i++)
+       {
+           for(var j=0;j<list_amis.length;j++)
+           {
+               if(list_amis[j]!=list_amis_used_in_ec2_instances[i])
+               {
+                    output.push(list_amis[j]);
+               }
+           }
+       }
+       console.log(output)
+        
+    })
+}
 
-ec2_description()
+
+
+//Routers begin from here
+//Unused AMIS(EC2 First Rule from  Excel Sheet)
+router.get('/unused_amis', (req, res) => {
+    console.log("Calling unused amis")
+    list_amis_used_in_ec2_instances=[]
+    ec2_description(function (list_ec2_description) {
+        for(var i=0;i<list_ec2_description.length;i++)
+        {
+            list_amis_used_in_ec2_instances.push(list_ec2_description.ImageId)
+        }
+    })
+    get_all_amis(function(list_amis){
+        output=[]
+       for(var i=0;i<list_amis_used_in_ec2_instances.length;i++)
+       {
+           for(var j=0;j<list_amis.length;j++)
+           {
+               if(list_amis[j]!=list_amis_used_in_ec2_instances[i])
+               {
+                    output.push(list_amis[j]);
+               }
+           }
+       }
+        
+    })
+    
+
+
+})
+//Unused AMIS(EC2 Second Rule from  Excel Sheet)
+router.get('/underutilized_ec2_instance',(req,res)=>{
+    console.log("Calling underutilized ec2 instance API")
+})
+
+temp()
 
 
 module.exports = router;

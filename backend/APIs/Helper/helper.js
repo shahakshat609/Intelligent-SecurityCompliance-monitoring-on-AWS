@@ -44,14 +44,6 @@ let get_unrestricted_security_groups=function()
     
 }
 
-// var promise=new Promise(function(resolve,reject){
-//     if(list_security_groups.length>0)
-//     resolve(list_security_groups);
-//     else
-//     reject("Did not get security groups")
-//     return promise
-// })
-
 function temp(){
     console.log("Starting the method get_sec-groups")
     get_security_groups(function(list){
